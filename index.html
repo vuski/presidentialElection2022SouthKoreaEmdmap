@@ -92,8 +92,8 @@
                 "증감이 클수록 색이 진해집니다. 유채색은 증가, 무채색은 감소."
             ];
             //var cCode = ["#0a3c99", "#6b0505", "#044433", "#025e68", "#997700"];
-            var cCode = ["#074cbc", "#b7092c", "#08754d", "#04aecc", "#f4a700", "#ffc700"];
-
+            //var cCode = ["#074cbc", "#b7092c", "#08754d", "#04aecc", "#f4a700", "#ffc700"];
+            var cCode = ["#074cbc", "#b7092c",  "#f4a700", "#ffc700"]
             var Projection = d3.geoMercator()
                 .center([127.890, 36.406])
                 .scale(100000)
@@ -186,8 +186,8 @@
                         name: d.dong_nm,
                     }
                 })
-              .defer(d3.csv, "data2.csv", function (d) {
-                  //console.log(d.code);
+              .defer(d3.csv, "data.csv", function (d) {
+                  //console.log(d.code+","+d.winner22);
                   return {
                       code: d.code,
                       p22lee: +d.p22lee,
@@ -201,7 +201,7 @@
                       r22yoon: +d.r22yoon,
                       r22sim: +d.r22sim,
                       win22r: +d.win22r,
-                      winner22: +d.winner22,
+                      winner22: +d.winner,
                       wingap22: +d.wingap22,
 
                       sec22r: +d.sec22r,
@@ -212,7 +212,7 @@
                       r17sim: +d.r17sim,
                       d_the: +d.d_the,
                       d_kuk: +d.d_kuk,
-                      d_sim: +d.d_sim
+                      d_sim: +d.d_sim                      
 
                   }
               })
@@ -221,6 +221,8 @@
 
             function main(error, sido, gu, emd, cd_sido, cd_gu, cd_emd, data) {
 
+
+                
                 //zoom
                 var zoomer = d3.zoom()//.translateExtent([0, 0])
                         .scaleExtent([0.05, 50]).on("zoom", zoom);
@@ -275,20 +277,12 @@
                             .attr("text-anchor", "middle")
                             .attr("fill", function (d) {
                                 if (frame == 0) {
-                                    var s = dataMap.get(d.properties.adm_cd).winner17 - 1;
+                                    var s = dataMap.get(d.properties.adm_cd).winner22 - 1;
+                                    //console.log("color ="+s);
                                     return cCode[s];
                                 } if (frame == 1) {
-                                    var s = dataMap.get(d.properties.adm_cd).sec17 - 1;
-                                    return cCode[s];
-                                } if (frame == 2) {
-                                    var s = dataMap.get(d.properties.adm_cd).third17 - 1;
-                                    return cCode[s];
-                                } if (frame == 3) {
-                                    var s = dataMap.get(d.properties.adm_cd).forth17 - 1;
-                                    return cCode[s];
-                                } if (frame == 4) {
-                                    var s = dataMap.get(d.properties.adm_cd).last17 - 1;
-                                    return cCode[s];
+                                    var s = dataMap.get(d.properties.adm_cd).sec22 - 1;
+                                    return cCode[s];                                
                                 } else {
                                     return "black";
                                 }
@@ -400,7 +394,7 @@
                             .attr("font-weight", "bold")
                            .text(function (d) {
                                var code = d.properties.adm_cd_gu;
-                               //console.log(dataMap.get(code).r17the);
+                               //console.log(dataMap.get(code).r17moon);
                                return guMap.get(code).name;
 
                            });
@@ -499,8 +493,8 @@
                 var votePer = ["이재명", "윤석열", "심상정"];
                
 
-                console.log(voteMax);
-                if (error) { console.log(error); }
+                //console.log(voteMax);
+                //if (error) { console.log(error); }
                 
 
                
@@ -513,7 +507,9 @@
                 var emdMap = d3.map(cd_emd, function (d) { return d.code; });
                
                 
+                //console.log(dataMap.get("11010"));
                 //console.log(dataMap.get("1101053"));
+                
                 mapBorderSido.selectAll("path")
                     .data(topojson.feature(sido, sido.objects.sido).features)
                     .enter()
@@ -859,6 +855,7 @@
                     mapBorder.selectAll("path")
                         .attr("fill", function (d) {
                             var s = dataMap.get(d.properties.adm_cd);
+                            //console.log(dataMap.get(s).wingap22);
                             return fillEMD(s);
                         });
 
@@ -905,10 +902,10 @@
                             })
                             .attr("fill", function (d) {
                                 if (frame == 0) {
-                                    var s = dataMap.get(d.properties.adm_cd).winner17 - 1;
+                                    var s = dataMap.get(d.properties.adm_cd).winner22 - 1;
                                     return cCode[s];
                                 } if (frame == 1) {
-                                    var s = dataMap.get(d.properties.adm_cd).sec17 - 1;
+                                    var s = dataMap.get(d.properties.adm_cd).sec22 - 1;
                                     return cCode[s];
                                 } else {
                                     return "black";
@@ -1056,7 +1053,7 @@
                         //2017년
                         var vote17 = [s.r17moon, s.r17HYA, s.r17sim];
 
-                        var votePer17 = ["문재인", "홍+유+안", "심상정"];
+                        var votePer17 = ["문재인", "홍준|유승|안철", "심상정"];
                         var d_cCode = ["#074cbc", "#b7092c", "#f4a700"];
                         var sum = 0;
                         var xx = (fnt * 1.9 * contentsStrLenMax)/2-20;
@@ -1200,7 +1197,7 @@
                     } else {
 
                         var vote = [s.r22lee, s.r22yoon, s.r22sim];
-                        var voteP = [s.p22lee, s.p122yoon, s.p22sim];
+                        var voteP = [s.p22lee, s.p22yoon, s.p22sim];
 
                         var sum = 0;
                         var xx = 20;
