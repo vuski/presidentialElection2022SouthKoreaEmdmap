@@ -1,0 +1,1305 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+     <style>
+          body {
+            margin: 0px;
+            font-family: 'Apple SD Gothic Neo','Noto Sans','Malgun Gothic','맑은 고딕',Dotum,'돋움',sans-serif !important;
+             overflow: hidden;
+             -ms-user-select: none; 
+           -moz-user-select: -moz-none;
+           -khtml-user-select: none;
+           -webkit-user-select: none;
+           user-select: none;
+           -webkit-touch-callout: none;
+        }
+
+          svg {
+              
+
+          }
+
+        .summary {
+            fill : #1b2c3a;
+        }
+        .notice {
+            fill : #505050;
+        }
+        .affiliation {            
+            fill : #e0e0e0;
+        }
+        .name {
+            fill : white;
+        }
+
+        .button path:hover {
+            stroke-width : 0.3;
+            
+        }
+
+        .mapBorder > .selected {
+            fill : #ef2990;             
+        }
+
+        .nodes {
+            stroke : white;
+            stroke-width : 0.1;
+        }
+        
+     
+ 
+    </style>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="https://d3js.org/topojson.v1.min.js"></script>
+    
+
+    <script>
+
+        window.onload = function () {
+
+            document.body.ontouchstart = function(e) {
+                e.preventDefault();
+            }
+
+            var isFirst = true;
+            var w = window,
+                   d = document,
+                   e = d.documentElement,
+                   g = d.getElementsByTagName('body')[0],
+                   w = (w.innerWidth || e.clientWidth || g.clientWidth),
+                   h = (w.innerHeight || e.clientHeight || g.clientHeight);
+            
+
+            var fnt = (w / 40) > 15 ? 15 : (w / 40);
+
+            var frame = 0;
+            //var w = 1800, h = 900;
+            console.log(w + "," + h);
+            
+            var contents = ["지역별 1위 득표 지도", "지역별 2위 득표 지도", "이재명 득표 지도", "윤석열 득표 지도", "심상정 득표 지도",
+               "19대 대선 대비 증감-이재명","19대 대선 대비 증감-윤석열","19대 대선 대비 증감 - 심상정"
+            ];
+            var contentsIndex = ["2위와 득표 차가 클수록 색이 진해집니다",
+                 "2위 득표율이 클수록 색이 진해집니다",
+                "이재명의 득표율이 높을수록 색이 진해집니다",
+                "윤석열의 득표율이 높을수록 색이 진해집니다",
+                "심상정의 득표율이 높을수록 색이 진해집니다",
+                "증감이 클수록 색이 진해집니다. 유채색은 증가, 무채색은 감소.",
+                "증감이 클수록 색이 진해집니다. 유채색은 증가, 무채색은 감소.",
+                "증감이 클수록 색이 진해집니다. 유채색은 증가, 무채색은 감소."
+            ];
+            //var cCode = ["#0a3c99", "#6b0505", "#044433", "#025e68", "#997700"];
+            var cCode = ["#074cbc", "#b7092c", "#08754d", "#04aecc", "#f4a700", "#ffc700"];
+
+            var Projection = d3.geoMercator()
+                .center([127.890, 36.406])
+                .scale(100000)
+                .translate([w / 2, h / 2]);
+            
+            var path = d3.geoPath()
+                .projection(Projection);
+
+            var svg = d3.select("#wrap_middle")
+                .append("svg")
+                .attr("width", w)
+                .attr("height", h);
+
+            var ratioOn = false;
+            var guNmOn = false;
+           
+            var mapFeature = svg.append("g").attr("class", "mapFeature")
+                            .attr("transform","translate("+(w/2)+","+(h/2)+") scale(0.05)");
+            //mapFeature.call(zoomer.transform, d3.zoomIdentity.scale(0.05))
+            //zoomer.scaleTo(mapFeature, 0.05);
+            
+            var text3 = svg.append("g").attr("class", "back");
+            var text0 = svg.append("g").attr("class", "notice");
+            var text1 = svg.append("g").attr("class", "summary");
+            var text2 = svg.append("g").attr("class", "propertyWindow");
+            //var text4 = svg.append("g").attr("class", "ratio");
+            
+            var button = svg.append("g").attr("class", "button");
+
+            
+            
+            //svg.on("mousemove", mousemove);
+            var mapBorderGuNm = mapFeature.append("g").attr("class", "mapBorderGuNm");
+            var mapBorderSidoNm = mapFeature.append("g").attr("class", "mapBorderSidoNm");
+
+            var mapBorder = mapFeature.append("g").attr("class", "mapBorder");
+            var mapBorderGu = mapFeature.append("g").attr("class", "mapBorderGu");
+            var mapBorderSido = mapFeature.append("g").attr("class", "mapBorderSido");
+            
+            var mapText = mapFeature.append("g").attr("class", "mapText");
+
+            var notice = svg.append("g")
+                               .attr("class", "noticeBoard");
+
+
+
+            function mousemove(d) {
+                 console.log(d3.mouse(this)[0] + "," + d3.mouse(this)[1]);
+            }
+
+            var cBorderSido = "#202020",
+                cBorderdong = "white";// "#c0c0c0",
+                cDongGradStart = "#ececc6";//d3.rgb(247, 251, 255);//,// "#c2db46",
+                cDongGradEnd = "#04311a";//d3.rgb(8, 48, 107);//,//"#32713A",
+                cButtonForwardFill = "#fafafa",//"#420100",
+                cButtonForwardStroke = "#202020",
+                cButtonBackwardFill = "#fafafa",// "#061a2d",
+                cButtonBackwardStroke = "#202020",
+                cDongDefault = "#fafafa",//"#eef2ea",// "#dae2d3",
+                cDongHilighted = "#225f70",
+                cTextBoxFill = "white",
+                cTextBoxStroke = "#a0a0a0";
+
+            
+
+
+            //read data
+            d3.queue()
+              .defer(d3.json, "sido.json")
+              .defer(d3.json, "sigungu.json")
+              .defer(d3.json, "emd.json")
+                .defer(d3.csv, "sido.csv", function (d) {
+                    //console.log(d.code);
+                    return {
+                        code: d.sido_cd,
+                        name: d.sido_nm,
+                    }
+                })
+                .defer(d3.csv, "gu.csv", function (d) {
+                    //console.log(d.code);
+                    return {
+                        code: d.gu_cd,
+                        name: d.gu_nm,
+                    }
+                })
+                .defer(d3.csv, "dong.csv", function (d) {
+                    //console.log(d.code);
+                    return {
+                        code: d.dong_cd,
+                        name: d.dong_nm,
+                    }
+                })
+              .defer(d3.csv, "data2.csv", function (d) {
+                  //console.log(d.code);
+                  return {
+                      code: d.code,
+                      p22lee: +d.p22lee,
+                      p22yoon: +d.p22yoon,
+                      p22sim: +d.p22sim,
+                      p22etc: +d.p22etc,
+                      p22valid: +d.p22valid,
+
+
+                      r22lee: +d.r22lee,
+                      r22yoon: +d.r22yoon,
+                      r22sim: +d.r22sim,
+                      win22r: +d.win22r,
+                      winner22: +d.winner22,
+                      wingap22: +d.wingap22,
+
+                      sec22r: +d.sec22r,
+                      sec22: +d.sec22,                     
+
+                      r17moon: +d.r17moon,
+                      r17HYA: +d.r17HYA,
+                      r17sim: +d.r17sim,
+                      d_the: +d.d_the,
+                      d_kuk: +d.d_kuk,
+                      d_sim: +d.d_sim
+
+                  }
+              })
+              .await(main);
+
+
+            function main(error, sido, gu, emd, cd_sido, cd_gu, cd_emd, data) {
+
+                //zoom
+                var zoomer = d3.zoom()//.translateExtent([0, 0])
+                        .scaleExtent([0.05, 50]).on("zoom", zoom);
+
+                svg
+                .call(zoomer)
+                .on("wheel", function () { d3.event.preventDefault(); }) //브라우저 기본 줌을 안되게 함
+                .on("dblclick.zoom", null);
+                svg.call(zoomer.transform, d3.zoomIdentity.translate(w / 2, h / 2).scale(0.05));
+
+                function zoom() {
+                    mapFeature.attr("transform", d3.event.transform);
+                    var scaleC = d3.zoomTransform(this).k;
+                    console.log(scaleC);
+
+                    //득표율 표기 부분
+                    if (scaleC > 1.5 && !ratioOn) {
+                        //console.log("들어옴");
+                        ratioOn = true;
+                        mapText.selectAll("text")
+                            .data(topojson.feature(emd, emd.objects.emd).features)
+                            .enter()
+                            .append("svg:text")
+                            .attr("class", function (d) { return "c" + d.properties.adm_cd; })
+                            .attr("dx", function (d) {                                
+                                var polygon = d.geometry.coordinates[0];
+                                if (polygon.length == 1) {
+                                    var max = 0;                                    
+                                    for (var i = 0; i < d.geometry.coordinates.length ; i++) {
+                                        if (d.geometry.coordinates[i][0].length > d.geometry.coordinates[max][0].length) max = i;
+                                    }
+                                    //console.log(d.geometry.coordinates[max][0]);
+                                    return Projection(d3.polygonCentroid(d.geometry.coordinates[max][0]))[0];
+                                } else {
+                                    //console.log(polygon);
+                                    return Projection(d3.polygonCentroid(polygon))[0];
+                                }
+                            })
+                            .attr("dy", function (d) {
+                                var polygon = d.geometry.coordinates[0];
+                                if (polygon.length == 1) {
+                                    var max = 0;
+                                    for (var i = 0; i < d.geometry.coordinates.length ; i++) {
+                                        if (d.geometry.coordinates[i][0].length > d.geometry.coordinates[max][0].length) max = i;
+                                    }
+                                    return Projection(d3.polygonCentroid(d.geometry.coordinates[max][0]))[1];
+                                } else {
+                                    //console.log(polygon);
+                                    return Projection(d3.polygonCentroid(polygon))[1];
+                                }
+                            })
+                            .attr("text-anchor", "middle")
+                            .attr("fill", function (d) {
+                                if (frame == 0) {
+                                    var s = dataMap.get(d.properties.adm_cd).winner17 - 1;
+                                    return cCode[s];
+                                } if (frame == 1) {
+                                    var s = dataMap.get(d.properties.adm_cd).sec17 - 1;
+                                    return cCode[s];
+                                } if (frame == 2) {
+                                    var s = dataMap.get(d.properties.adm_cd).third17 - 1;
+                                    return cCode[s];
+                                } if (frame == 3) {
+                                    var s = dataMap.get(d.properties.adm_cd).forth17 - 1;
+                                    return cCode[s];
+                                } if (frame == 4) {
+                                    var s = dataMap.get(d.properties.adm_cd).last17 - 1;
+                                    return cCode[s];
+                                } else {
+                                    return "black";
+                                }
+                                
+                            })//"black")
+                            .attr("alignment-baseline", "middle")
+                            .attr("font-size", function (d) {
+                                var polygon = d.geometry.coordinates[0];
+                                var area = 0;
+                                if (polygon.length == 1) {
+                                    var max = 0;
+                                    for (var i = 0; i < d.geometry.coordinates.length ; i++) {
+                                        if (d.geometry.coordinates[i][0].length > d.geometry.coordinates[max][0].length) max = i;
+                                    }
+                                   area = d3.polygonArea(d.geometry.coordinates[max][0]);
+                                } else {
+                                    //console.log(polygon);
+                                   area = d3.polygonArea(polygon);
+                                }
+
+                                var ratioScale = d3.scaleLinear().domain([0.0001, 0.003]).range([0.2, 1]).clamp(true);
+                                return ratioScale(area)+"em";
+                            })
+                            .text(function (d) {
+                                var code = d.properties.adm_cd;
+                                var txt;
+                                switch (frame) {
+                                    case 0:
+                                        txt = dataMap.get(code).wingap22;
+                                        return "+" + d3.format("-0,.1f")(txt * 100) + "%";
+                                        break;
+                                    case 1:
+                                        txt = dataMap.get(code).sec22r;
+                                        return d3.format("-0,.1f")(txt * 100) + "%";
+                                        break;
+                                    case 2:
+                                        txt = dataMap.get(code).r22lee;
+                                        break;
+                                    case 3:
+                                        txt = dataMap.get(code).r22yoon;
+                                        break;
+                                    case 4:
+                                        txt = dataMap.get(code).r22sim;
+                                        break;
+                                    case 5:
+                                        txt = dataMap.get(code).d_the;
+                                        return (txt>=0? "+" :"")+ d3.format("-0,.1f")(txt * 100) + "%";
+                                        break;
+                                    case 6:
+                                        txt = dataMap.get(code).d_kuk;
+                                        return (txt >= 0 ? "+" : "") + d3.format("-0,.1f")(txt * 100) + "%";
+                                        break;
+                                    case 7:
+                                        txt = dataMap.get(code).d_sim;
+                                        return (txt >= 0 ? "+" : "") + d3.format("-0,.1f")(txt * 100) + "%";
+                                        break;
+                                    default:
+                                        break;
+                                }
+                                //console.log(dataMap.get(code).r17the);
+                                return d3.format("-0,.1f")(txt * 100) + "%";
+                            });
+                    } else if(scaleC<=1.5 && ratioOn) { //스케일이 작아지면
+                        ratioOn = false;
+                        mapText.selectAll("*").remove();
+                    }
+
+                    //시도 / 구이름 표시 부분
+                    if (scaleC > 0.5 && !guNmOn) {
+                        guNmOn = true;
+                        mapBorderGuNm.selectAll("text")
+                           .data(topojson.feature(gu, gu.objects.gu).features)
+                           .enter()
+                           .append("svg:text")
+                           .attr("class", "gutext")// function (d) { return "c" + d.properties.adm_cd_gu; })
+                           .attr("dx", function (d) {
+                               var polygon = d.geometry.coordinates;
+                               //console.log(d.geometry.coordinates);
+                               if (polygon.length > 1) {
+                                   var max = 0;
+                                   for (var i = 0; i < d.geometry.coordinates.length ; i++) {
+                                       if (d.geometry.coordinates[i][0].length > d.geometry.coordinates[max][0].length) max = i;
+                                   }
+                                   //console.log(d.geometry.coordinates[max][0]);
+                                   return Projection(d3.polygonCentroid(d.geometry.coordinates[max][0]))[0];
+                               } else {
+                                   //console.log(polygon);
+                                   return Projection(d3.polygonCentroid(polygon[0]))[0];
+                               }
+                           })
+                           .attr("dy", function (d) {
+                               var polygon = d.geometry.coordinates;
+                               if (polygon.length > 1) {
+                                   var max = 0;
+                                   for (var i = 0; i < d.geometry.coordinates.length ; i++) {
+                                       if (d.geometry.coordinates[i][0].length > d.geometry.coordinates[max][0].length) max = i;
+                                   }
+                                   return Projection(d3.polygonCentroid(d.geometry.coordinates[max][0]))[1];
+                               } else {
+                                   //console.log(polygon);
+                                   return Projection(d3.polygonCentroid(polygon[0]))[1];
+                               }
+                           })
+                           .attr("text-anchor", "middle")
+                           .attr("fill", "black")
+                            //.attr("fill-opacity", 0.3)
+                           .attr("alignment-baseline", "middle")
+                           .attr("font-size", "0.8em")
+                            .attr("font-weight", "bold")
+                           .text(function (d) {
+                               var code = d.properties.adm_cd_gu;
+                               //console.log(dataMap.get(code).r17the);
+                               return guMap.get(code).name;
+
+                           });
+
+                        //시도이름
+                        mapBorderSidoNm.selectAll("text")
+                           .data(topojson.feature(gu, gu.objects.gu).features)
+                           .enter()
+                           .append("svg:text")
+                           .attr("class", "sidoText")//function (d) { return "c" + d.properties.adm_cd_gu; })
+                           .attr("dx", function (d) {
+                               var polygon = d.geometry.coordinates;
+                               //console.log(d.geometry.coordinates);
+                               if (polygon.length > 1) {
+                                   var max = 0;
+                                   for (var i = 0; i < d.geometry.coordinates.length ; i++) {
+                                       if (d.geometry.coordinates[i][0].length > d.geometry.coordinates[max][0].length) max = i;
+                                   }
+                                   //console.log(d.geometry.coordinates[max][0]);
+                                   return Projection(d3.polygonCentroid(d.geometry.coordinates[max][0]))[0];
+                               } else {
+                                   //console.log(polygon);
+                                   return Projection(d3.polygonCentroid(polygon[0]))[0];
+                               }
+                           })
+                           .attr("dy", function (d) {
+                               var polygon = d.geometry.coordinates;
+                               if (polygon.length > 1) {
+                                   var max = 0;
+                                   for (var i = 0; i < d.geometry.coordinates.length ; i++) {
+                                       if (d.geometry.coordinates[i][0].length > d.geometry.coordinates[max][0].length) max = i;
+                                   }
+                                   return Projection(d3.polygonCentroid(d.geometry.coordinates[max][0]))[1] - 12;
+                               } else {
+                                   //console.log(polygon);
+                                   return Projection(d3.polygonCentroid(polygon[0]))[1]-12;
+                               }
+                           })
+                           .attr("text-anchor", "middle")
+                           .attr("fill", "black")
+                            //.attr("fill-opacity", 0.3)
+                           .attr("alignment-baseline", "middle")
+                           .attr("font-size", "0.5em")
+                            .attr("font-weight", "bold")
+                           .text(function (d) {
+                               var code = d.properties.adm_cd_gu.substring(0,2);
+                               //console.log(dataMap.get(code).r17the);
+                               return sidoMap.get(code).name;
+
+                           });
+
+                    } else if (scaleC <= 0.5 && guNmOn){
+                        guNmOn = false;
+                        mapBorderGuNm.selectAll("*").remove();
+                        mapBorderSidoNm.selectAll("*").remove();
+                    }
+
+
+                };
+
+                var gap22Max = d3.max(data, function (d) { return d.wingap22; });
+                var sec22Max = d3.max(data, function (d) { return d.sec22r; });
+                
+                var lee22Max = d3.max(data, function (d) { return d.r22lee; });
+                var yoon22Max = d3.max(data, function (d) { return d.r22yoon; });
+                var sim22Max = d3.max(data, function (d) { return d.r22sim; });
+                var voteMax = d3.max(data, function (d) { return (d.p22lee + d.p22yoon + d.p22sim); });
+                var contentsStrLenMax = d3.max(contents, function (d) { return d.length });
+
+                var d_theMax = d3.max(data, function (d) { return d.d_the; });
+                var d_kukMax = d3.max(data, function (d) { return d.d_kuk; });
+                var d_simMax = d3.max(data, function (d) { return d.d_sim; });
+
+                var d_theMin = d3.min(data, function (d) { return d.d_the; });
+                var d_kukMin = d3.min(data, function (d) { return d.d_kuk; });
+                var d_simMin = d3.min(data, function (d) { return d.d_sim; });
+/*
+                var areaMax = d3.max(topojson.feature(emd, emd.objects.emd).features, function (d) {
+                    var polygon = d.geometry.coordinates[0];
+                    var area = 0;
+                    if (polygon.length == 1) {
+                        var max = 0;
+                        for (var i = 0; i < d.geometry.coordinates.length ; i++) {
+                            if (d.geometry.coordinates[i][0].length > d.geometry.coordinates[max][0].length) max = i;
+                        }
+                        area = d3.polygonArea(d.geometry.coordinates[max][0]);
+                    } else {
+                        //console.log(polygon);
+                        area = d3.polygonArea(polygon);
+                    }
+
+                    return area;
+                });
+                console.log("areaMax:"+ areaMax);
+*/
+                var votePer = ["이재명", "윤석열", "심상정"];
+               
+
+                console.log(voteMax);
+                if (error) { console.log(error); }
+                
+
+               
+               /* var cScale = d3.scaleLinar().domain([1, 117])
+                          .range([0, 1]);
+                */
+                var dataMap = d3.map(data, function (d) { return d.code; });
+                var sidoMap = d3.map(cd_sido, function (d) { return d.code; });
+                var guMap = d3.map(cd_gu, function (d) { return d.code; });
+                var emdMap = d3.map(cd_emd, function (d) { return d.code; });
+               
+                
+                //console.log(dataMap.get("1101053"));
+                mapBorderSido.selectAll("path")
+                    .data(topojson.feature(sido, sido.objects.sido).features)
+                    .enter()
+                    .append("svg:path")
+                    .attr("class", "sidoBoundary")
+                    .attr("d", path)
+                    .attr("fill", "none")
+                    .attr("stroke", cBorderSido)
+                    .attr("stroke-width", 3);
+                mapBorderGu.selectAll("path")
+                    .data(topojson.feature(gu, gu.objects.gu).features)
+                    .enter()
+                    .append("svg:path")
+                    .attr("class", "sidoBoundary")
+                    .attr("d", path)
+                    .attr("fill", "none")
+                    .attr("stroke", cBorderSido)
+                    .attr("stroke-width", 1.5);
+
+                mapBorder.selectAll("path")
+                        .data(topojson.feature(emd, emd.objects.emd).features)
+                        .enter()
+                        .append("svg:path")
+                        .attr("class", function (d) { return "c" + d.properties.adm_cd; })
+                        .attr("d", path)
+                        .attr("fill", cDongDefault)
+                        .attr("fill-opacity", 0.80)
+                        .attr("stroke", cBorderdong)
+                        .attr("stroke-width", 0.5)
+                        //.attr("stroke-opacity", 0.9)
+                        .on("mouseover", function (d) {
+                            if (event.stopImmediatePropagation) event.stopImmediatePropagation(); //MOZILLA
+                            else event.isImmediatePropagationEnabled = false; //IE
+                            return clicked(d);
+                        })
+  /*              .on("touchstart", function (d) {
+                    if (event.stopImmediatePropagation) event.stopImmediatePropagation(); //MOZILLA
+                    else event.isImmediatePropagationEnabled = false; //IE
+                    return clicked(d);
+                })
+                .on("touchend", function (d) {
+                    if (event.stopImmediatePropagation) event.stopImmediatePropagation(); //MOZILLA
+                    else event.isImmediatePropagationEnabled = false; //IE
+                    text2.selectAll("*").remove();
+                })
+         */            .on("click", function (d) {
+                        if (event.stopImmediatePropagation) event.stopImmediatePropagation(); //MOZILLA
+                        else event.isImmediatePropagationEnabled = false; //IE
+                        return clicked(d);
+                    });
+                
+               
+
+                //console.log("1");
+/*
+*/
+
+                var forward = button.append("g").append("path").attr("class", "forward")
+                    .attr("transform", "translate(" + (w - 60) + "," + (h/2) + ") scale(18) rotate(90)")
+                    .attr("d", d3.symbol().type(d3.symbolTriangle).size(8))
+                    .attr("fill", cButtonForwardFill)
+                    .attr("fill-opacity", 0.8)
+                    .attr("stroke", cButtonForwardStroke)
+                    .attr("stroke-width", 0.1)
+                    .on("click", function () {
+                        d3.event.preventDefault();
+                        d3.select(this)
+                            .attr("fill", "white")
+                            .transition()
+                            .duration(600)
+                            .attr("fill", cButtonForwardFill);
+
+                        if (frame == contents.length - 1) {
+                            frame = 0;
+                        } /*else if (frame == 4) {
+                            frame = 10;
+                        } */else {
+                            frame++;
+                        }
+                        //console.log("forward0");
+                        return next();
+                    })
+                    .on("touchend", function () {
+                        d3.event.preventDefault();
+                        d3.select(this)
+                            .attr("fill", "white")
+                            .transition()
+                            .duration(600)
+                            .attr("fill", cButtonForwardFill);
+
+                        if (frame == contents.length - 1) {
+                            frame = 0;
+                        }/* else if (frame == 4) {
+                            frame = 10;
+                        } */else {
+                            frame++;
+                        }
+                        //console.log("forward0");
+                        return next();
+                    });
+
+                
+
+                var backward = button.append("g").append("path").attr("class", "backward")
+                    .attr("transform", "translate(" + (fnt * 1.9 * contentsStrLenMax +50) + "," + (h /2) + ") scale(18) rotate(270)")
+                    .attr("d", d3.symbol().type(d3.symbolTriangle).size(8))
+                    .attr("fill", cButtonBackwardFill)
+                    .attr("stroke", cButtonBackwardStroke)
+                    .attr("stroke-width", 0.1)
+                    .attr("fill-opacity", 0.8)
+                    .on("click", function () {
+                        d3.event.preventDefault();
+                        d3.select(this)
+                            .attr("fill", "white")
+                            .transition()
+                            .duration(600)
+                            .attr("fill", cButtonBackwardFill);
+                        if (frame <= 0) {
+                            frame = contents.length - 1;
+                        } /*else if (frame == 10) {
+                            frame = 4;
+                        } */else {
+                            frame--;
+                        }
+                        return next();
+                    })
+                .on("touchend", function () {
+                    d3.event.preventDefault();
+                    d3.select(this)
+                        .attr("fill", "white")
+                        .transition()
+                        .duration(600)
+                        .attr("fill", cButtonBackwardFill);
+                    if (frame <= 0) {
+                        frame = contents.length - 1;
+                    } /*else if (frame == 10) {
+                        frame = 4;
+                    } */else {
+                        frame--;
+                    }
+                    return next();
+                });
+
+                
+                svg.on("click", function (d) {
+                    d3.event.preventDefault();
+                    if (event.stopImmediatePropagation) event.stopImmediatePropagation(); //MOZILLA
+                    else event.isImmediatePropagationEnabled = false; //IE
+                    mapBorder.selectAll("*").classed("selected", false);
+                    text2.selectAll("*").remove();
+                    //return clicked();                                
+                });
+                
+                next();
+
+                function drawNoticeBoard() {
+
+                    notice
+                        .append("rect")
+                        .attr("class", "noticeBG")
+                        .attr("x", w * 0.05)
+                        .attr("y", 50)
+                        .attr("width", w * 0.9)
+                        .attr("height", h -100)
+                        .attr("fill", "white")
+                        .attr("fill-opacity", 0.98)
+                        .attr("stroke", "#303030")
+                        .attr("rx", 20)
+                        .attr("ry", 20);
+
+                    notice
+                            .append("text")
+                            .attr("class", "noticeT")
+                            .attr("dx", w / 2)
+                            .attr("dy", 50 + (h-100)*0.1)
+                            .attr("text-anchor", "middle")
+                            .attr("alignment-baseline", "middle")
+                            .attr("font-size", fnt*2)
+                            .attr("font-weight", "bold")
+                            .text("지도 사용법");
+
+                    notice
+                            .append("text")
+                            .attr("class", "noticeT")
+                            .attr("dx", w / 2)
+                            .attr("dy", 50 + (h - 100) * 0.3)
+                            .attr("text-anchor", "middle")
+                            .attr("alignment-baseline", "middle")
+                            .attr("font-size", fnt*1.3)
+                            //.attr("font-weight", "bold")
+                            .text("행정구역을 클릭하면 후보별 득표 정보를 볼 수 있습니다.");
+
+                    notice
+                            .append("text")
+                            .attr("class", "noticeT")
+                            .attr("dx", w / 2)
+                            .attr("dy", 50 + (h - 100) * 0.4)
+                            .attr("text-anchor", "middle")
+                            .attr("alignment-baseline", "middle")
+                            .attr("font-size", fnt * 1.3)
+                            //.attr("font-weight", "bold")
+                            .text("화면을 확대하면 득표율 분포가 나타납니다.");
+
+                    notice
+                            .append("text")
+                            .attr("class", "noticeT")
+                            .attr("dx", w / 2)
+                            .attr("dy", 50 + (h - 100) * 0.5)
+                            .attr("text-anchor", "middle")
+                            .attr("alignment-baseline", "middle")
+                            .attr("font-size", fnt * 1.3)
+                            //.attr("font-weight", "bold")
+                            .text("좌우 화살표를 클릭하면 다른 분포지도를 볼 수 있습니다.");
+
+                    notice
+                            .append("text")
+                            .attr("class", "noticeT")
+                            .attr("dx", w / 2)
+                            .attr("dy", 50 + (h - 100) * 0.85)
+                            .attr("text-anchor", "middle")
+                            .attr("alignment-baseline", "middle")
+                            .attr("font-size", fnt * 2)
+                            //.attr("font-weight", "bold")
+                            .text("화면을 클릭하면 시작합니다.");
+
+           /*         notice
+                            .append("text")
+                            .attr("class", "noticeT")
+                            .attr("dx", w / 2)
+                            .attr("dy", 50 + (h - 100) * 0.9)
+                            .attr("text-anchor", "middle")
+                            .attr("alignment-baseline", "middle")
+                            .attr("fill", "#b71f17")
+                            .attr("font-size", fnt * 1.5)
+                            .attr("font-weight", "bold")
+                            .text("휴대폰으로 접속하시면 구별 분포도를 볼 수 있습니다.");
+*/
+                    notice
+                          .on("click", erase);
+
+                }
+
+                function erase() {
+                    d3.select(".noticeBoard").remove();
+                }
+
+                function next() {
+                    if (isFirst) {
+                        isFirst = false;
+
+                        text0.append("text")
+                           .attr("class", "hello1")
+                           .text("2022년 20대 대통령 선거 개표 결과")
+                           .attr("dx", 20)
+                           .attr("dy", 1.8 * fnt)
+                           .attr("text-anchor", "start")
+                           .attr("font-size", 1.1 * fnt + "px");
+                        //.attr("font-weight", "bold");
+
+                        text0.append("text")
+                           .attr("class", "description4")
+                           .text("지도를 확대하면 상세한 동별 정보를 볼 수 있습니다")
+                           .attr("dx", 20)
+                           .attr("dy", h-20)
+                           .attr("text-anchor", "start")
+                           .attr("font-size", 0.9 * fnt + "px");
+
+                        
+                        //console.log(contentsStrLenMax);
+                        var barLength = (w - (fnt * 2.3 * contentsStrLenMax) - 100) / 5;
+
+                        text0.append("line")
+                        .attr("x1", 10)
+                        .attr("x2", fnt * 1.9 * contentsStrLenMax -10)
+                        .attr("y1", fnt * 2.5)
+                        .attr("y2", fnt * 2.5)
+                        .attr("stroke", "black")
+                        .attr("stroke-width", 0.5)
+                        ;
+                        
+                        
+
+                        text3.append("rect")
+                            .attr("class", "infoBackground")
+                            .attr("x", 0)
+			                .attr("y", 0)
+			                .attr("width", fnt * 1.9 * contentsStrLenMax)
+			                .attr("height", h)
+                            .attr("fill", cTextBoxFill)
+                            .attr("fill-opacity", 0.9)
+                            .attr("stroke", "none");
+
+                        
+/*
+                        for (var i = 0 ; i < votePer.length ; i++) {
+                            text0.append("rect")
+                                .attr("class", "indexBar")
+                                .attr("x", w - (barLength*5) - 30 + i*barLength)
+                                .attr("y", fnt * 2.7 + 20)
+                                .attr("width", barLength)
+                                .attr("height", fnt *0.5)
+                                .attr("fill", cCode[i])
+                                .attr("fill-opacity", 0.9)
+                                .attr("stroke", "white")
+                                .attr("stroke-width", 1);
+                            text0.append("text")
+                                .attr("class", "indexText")
+                                .attr("dx", w - (barLength * 5) - 30 + (i+0.5) * barLength)
+                                .attr("dy", fnt * 5 + 20)
+                                .attr("text-anchor", "middle")
+                                .attr("alignment-baseline", "middle")
+                                .attr("font-size", fnt * 1.2)
+                                .attr("fill", cCode[i])
+                                .attr("font-weight", "bold")
+                                .text(votePer[i]);
+                        }
+*/
+                        drawNoticeBoard();
+
+                        isFirst = false;
+                    }
+
+                    text1.selectAll("*").remove();
+                    
+                    text1.append("text")        //1
+                        .attr("class", "title")
+                        .text(contents[frame])
+                        .attr("dx", 20)
+                        .attr("dy", fnt * 5)
+                        .attr("text-anchor", "start")
+                        .style("font-size", (fnt * 2) + "px");
+
+                    text1.append("text")        //1
+                        .attr("class", "title")
+                        .text(contentsIndex[frame])
+                        .attr("dx", 20)
+                        .attr("dy", fnt * 6.5)
+                        .attr("text-anchor", "start")
+                        .attr("fill", "#999999")
+                        .style("font-size", fnt * 1 + "px");
+
+
+                    mapBorder.selectAll("path")
+                        .attr("fill", function (d) {
+                            var s = dataMap.get(d.properties.adm_cd);
+                            return fillEMD(s);
+                        });
+
+                    if (ratioOn) {
+                        mapText.selectAll("text")
+                            .text(function (d) {
+                                var code = d.properties.adm_cd;
+                                var txt;
+                                switch (frame) {
+                                    case 0:
+                                        txt = dataMap.get(code).wingap22;
+                                        return "+" + d3.format("-0,.1f")(txt * 100) + "%";
+                                        break;
+                                    case 1:
+                                        txt = dataMap.get(code).sec22r;
+                                        return d3.format("-0,.1f")(txt * 100) + "%";
+                                        break;                                   
+                                    case 2:
+                                        txt = dataMap.get(code).r22lee;
+                                        break;
+                                    case 3:
+                                        txt = dataMap.get(code).r22yoon;
+                                        break;
+                                    case 4:
+                                        txt = dataMap.get(code).r22sim;
+                                        break;           
+                                    case 5:
+                                        txt = dataMap.get(code).d_the;
+                                        return (txt >= 0 ? "+" : "") + d3.format("-0,.1f")(txt * 100) + "%";
+                                        break;
+                                    case 6:
+                                        txt = dataMap.get(code).d_kuk;
+                                        return (txt >= 0 ? "+" : "") + d3.format("-0,.1f")(txt * 100) + "%";
+                                        break;
+                                    case 7:
+                                        txt = dataMap.get(code).d_sim;
+                                        return (txt >= 0 ? "+" : "") + d3.format("-0,.1f")(txt * 100) + "%";
+                                        break;
+                                    default:
+                                        break;
+                                }
+                                //console.log(dataMap.get(code).r17the);
+                                return d3.format("-0,.1f")(txt * 100) + "%";
+                            })
+                            .attr("fill", function (d) {
+                                if (frame == 0) {
+                                    var s = dataMap.get(d.properties.adm_cd).winner17 - 1;
+                                    return cCode[s];
+                                } if (frame == 1) {
+                                    var s = dataMap.get(d.properties.adm_cd).sec17 - 1;
+                                    return cCode[s];
+                                } else {
+                                    return "black";
+                                }
+
+                            });
+                    }
+                       
+                }
+
+                function fillEMD(s) {
+                    //console.log(frame);
+                    switch (frame) {
+
+                        case 0:
+                            var colorGradient = d3.scaleLinear()
+                               .domain([0, gap22Max])
+                               .range(["white", cCode[s.winner22 - 1]]);
+                            return colorGradient(s.wingap22);
+                            break;
+                        case 1:
+                            var colorGradient = d3.scaleLinear()
+                               .domain([0, sec22Max])
+                               .range(["white", cCode[s.sec22 - 1]]);
+                            return colorGradient(s.sec22r);
+                            break;
+                        case 2:
+                            var colorGradient = d3.scaleLinear()
+                               .domain([0, lee22Max])
+                               .range(["white", cCode[0]]);
+                            return colorGradient(s.r22lee);
+                            break;
+                        case 3:
+                            var colorGradient = d3.scaleLinear()
+                               .domain([0, yoon22Max])
+                               .range(["white", cCode[1]]);
+                            return colorGradient(s.r22yoon);
+                            break;
+                        case 4:
+                            var colorGradient = d3.scaleLinear()
+                               .domain([0, sim22Max])
+                               .range(["white", cCode[2]]);
+                            return colorGradient(s.r22sim);
+                            break;                        
+                        case 5:
+                            var colorGradient;
+                            if (s.d_the >= 0) {
+                                colorGradient = d3.scaleLinear()
+                               .domain([0, d_theMax])
+                               .range(["white", cCode[0]]);
+                            } else {
+                                colorGradient = d3.scaleLinear()
+                              .domain([d_theMin,0])
+                              .range(["black", "white"]);
+                            }
+                            return colorGradient(s.d_the);
+                        case 6:
+                            var colorGradient;
+                            if (s.d_kuk >= 0) {
+                                colorGradient = d3.scaleLinear()
+                               .domain([0, d_kukMax])
+                               .range(["white", cCode[1]]);
+                            } else {
+                                colorGradient = d3.scaleLinear()
+                              .domain([d_kukMin, 0])
+                              .range(["black", "white"]);
+                            }
+                            return colorGradient(s.d_kuk);
+                        case 7:
+                            var colorGradient;
+                            if (s.d_sim >= 0) {
+                                colorGradient = d3.scaleLinear()
+                               .domain([0, d_simMax])
+                               .range(["white", cCode[2]]);
+                            } else {
+                                colorGradient = d3.scaleLinear()
+                              .domain([d_simMin, 0])
+                              .range(["black", "white"]);
+                            }
+                            return colorGradient(s.d_sim);                       
+                        default:
+                            return "white";
+                            break;
+
+                    }
+                    
+                }
+
+                function clicked(d) {
+                    //console.log(d.properties.adm_cd);
+                    text2.selectAll("*").remove();
+
+                    var code = d.properties.adm_cd;
+                    /*
+                    for (var i = 0 ; i < regionArray.length ; i++) {
+                        //console.log(personMap.get(regionArray[i]).length);
+                        mapBorder.select(".c" + regionArray[i]).attr("fill", colorGradient(personMap.get(regionArray[i]).length));
+                    } */
+                    // mapBorder.selectAll(".c" + code).attr("fill", cDongHilighted);
+                    mapBorder.selectAll("*").classed("selected", false);
+                    mapBorder.selectAll(".c" + code).classed("selected", true);
+
+                 
+
+                    // console.log(code + "," + regionMap.get(code).sgg);
+
+                    //데이터를 불러온다.
+                    var s = dataMap.get(code);
+                    //console.log(s.p17hong);
+
+ /*                  
+                    text2.append("rect")
+                            .attr("class", "popupW")
+                            .attr("x", 0)
+			                .attr("y", 8.8 * fnt)
+			                .attr("width", w)
+			                .attr("height", 130)
+                            .attr("fill", cTextBoxFill)
+                            .attr("fill-opacity", 0.9)
+                            .attr("stroke", "none");
+   */                         
+                    text2.append("text")
+                        .attr("class", "popupWName")
+                        .attr("dx", 20)
+                        .attr("dy", fnt * 8)
+                        .attr("text-anchor", "start")
+                        .attr("alignment-baseline", "middle")
+                        .attr("font-size", fnt * 1.2)
+                        //.attr("font-weight", "bold")
+                        .text(sidoMap.get(code.substring(0, 2)).name + " " + guMap.get(code.substring(0, 5)).name + " " + emdMap.get(code).name );
+
+                    text2.append("text")
+                       .attr("class", "popupWValid")
+                       .attr("dx", 20)
+                       .attr("dy", fnt * 9.5)
+                       .attr("text-anchor", "start")
+                       .attr("alignment-baseline", "middle")
+                       .attr("font-size", fnt * 1)
+                       //.attr("font-weight", "bold")
+                       .text("유효투표수 : " + d3.format("-0,")(s.p22valid) + "표");
+
+
+                    if (frame >= 5 && frame <= 7) {
+
+                        //2017년
+                        var vote17 = [s.r17moon, s.r17HYA, s.r17sim];
+
+                        var votePer17 = ["문재인", "홍+유+안", "심상정"];
+                        var d_cCode = ["#074cbc", "#b7092c", "#f4a700"];
+                        var sum = 0;
+                        var xx = (fnt * 1.9 * contentsStrLenMax)/2-20;
+                        var height = h - (13 * fnt + 50);
+                        //var dep = 5+ (15* (s.p17the + s.p17hong + s.p17kuk + s.p17yoo + s.p17jung) / voteMax);
+                        var dep = 30;
+
+                        text2.append("text")
+                                .attr("class", "description2")
+                                .attr("dx", xx )
+                                .attr("dy", 12.8 * fnt )
+                                .attr("text-anchor", "end")
+                                .attr("alignment-baseline", "baseline")
+                                .attr("font-size", fnt * 1.3)
+                                .attr("fill", "black")
+                                .attr("font-weight", "bold")
+                                .text("2017년 대선");
+
+                        text2.append("text")
+                                .attr("class", "description2")
+                                .attr("dx", xx)
+                                .attr("dy", 11.4 * fnt)
+                                .attr("text-anchor", "end")
+                                .attr("alignment-baseline", "baseline")
+                                .attr("font-size", fnt * 0.7)
+                                .attr("fill", "black")
+                                //.attr("font-weight", "bold")
+                                .text("(보정치)");
+
+                        for (var i = 0 ; i < vote17.length ; i++) {
+                            text2.append("line")
+                            .attr("x1", xx - dep - 2)
+                            .attr("x2", (xx - dep - 10))// - (fnt * 1.7 * 2.6) * (Math.pow(-1, i + 1) + 1))
+                            .attr("y1", 13 * fnt + sum + height * vote17[i] / 2)
+                            .attr("y2", 13 * fnt + sum + height * vote17[i] / 2)
+                            .attr("stroke", d_cCode[i])
+                            .attr("stroke-width", 0.5)
+                            ;
+                            text2.append("rect")
+                                .attr("class", "barChart")
+                                .attr("x", xx-dep)
+                                .attr("y", 13 * fnt + sum)
+                                .attr("width", dep)
+                                .attr("height", height * vote17[i])
+                                .attr("fill", d_cCode[i])
+                                .attr("fill-opacity", 0.3)
+                                .attr("stroke", "white")
+                                .attr("stroke-width", 1);
+                            text2.append("text")
+                                .attr("class", "description1")
+                                .attr("dx", (xx - dep - 13))// - (fnt * 1.7 * 2.6) * (Math.pow(-1, i + 1) + 1))
+                                .attr("dy", 13 * fnt + sum + height * vote17[i] / 2)
+                                .attr("text-anchor", "end")
+                                .attr("alignment-baseline", "middle")
+                                .attr("font-size", fnt * 1.7)
+                                .attr("fill", d_cCode[i])
+                                .attr("font-weight", "bold")
+                                .text(d3.format("-0,.1f")(vote17[i] * 100) + "%");
+                            text2.append("text")
+                                .attr("class", "description2")
+                                .attr("dx", (xx - dep - 10) - (fnt * 1.7 * 3.3))//(fnt * 1.7 * 2.6) * (Math.pow(-1, i + 1) + 1))
+                                .attr("dy", 13 * fnt + sum + height * vote17[i] / 2)
+                                .attr("text-anchor", "end")
+                                .attr("alignment-baseline", "middle")
+                                .attr("font-size", fnt * 1.2)
+                                .attr("fill", d_cCode[i])
+                                .attr("font-weight", "bold")
+                                .text(votePer17[i]);
+                            
+                            sum += height * vote17[i];
+                        }
+
+                        //2022년
+                        var vote22 = [s.r22lee, s.r22yoon, s.r22sim];
+
+                        var votePer22 = ["이재명", "윤석열", "심상정"];
+                        var d_cCode = ["#074cbc", "#b7092c", "#f4a700"];
+                        var sum = 0;
+                        var xx = (fnt * 1.9 * contentsStrLenMax)/2 +20;
+                        var height = h - (13 * fnt + 50);
+                        
+                        var dep = 30;
+
+                        text2.append("text")
+                                .attr("class", "description2")
+                                .attr("dx", (xx ))
+                                .attr("dy", 12.8 * fnt)
+                                .attr("text-anchor", "start")
+                                .attr("alignment-baseline", "baseline")
+                                .attr("font-size", fnt * 1.3)
+                                .attr("fill", "black")
+                                .attr("font-weight", "bold")
+                                .text("2022년 대선");
+
+                        for (var i = 0 ; i < vote22.length ; i++) {
+                            text2.append("line")
+                            .attr("x1", xx + dep + 2)
+                            .attr("x2", (xx + dep + 10))// + (fnt * 1.7 * 2.6) * (Math.pow(-1, i + 1) + 1))
+                            .attr("y1", 13 * fnt + sum + height * vote22[i] / 2)
+                            .attr("y2", 13 * fnt + sum + height * vote22[i] / 2)
+                            .attr("stroke", d_cCode[i])
+                            .attr("stroke-width", 0.5)
+                            ;
+                            text2.append("rect")
+                                .attr("class", "barChart")
+                                .attr("x", xx)
+                                .attr("y", 13 * fnt + sum)
+                                .attr("width", dep)
+                                .attr("height", height * vote22[i])
+                                .attr("fill", d_cCode[i])
+                                .attr("fill-opacity", 0.9)
+                                .attr("stroke", "white")
+                                .attr("stroke-width", 1);
+                            text2.append("text")
+                                .attr("class", "description1")
+                                .attr("dx", (xx + dep + 10) + (fnt * 1.7 * 3))// + (fnt * 1.7 * 2.6) * (Math.pow(-1, i + 1) + 1) )
+                                .attr("dy", 13 * fnt + sum + height * vote22[i] / 2)
+                                .attr("text-anchor", "end")
+                                .attr("alignment-baseline", "middle")
+                                .attr("font-size", fnt * 1.7)
+                                .attr("fill", d_cCode[i])
+                                .attr("font-weight", "bold")
+                                .text(d3.format("-0,.1f")(vote22[i] * 100) + "%");
+                            text2.append("text")
+                                .attr("class", "description2")
+                                .attr("dx", (xx + dep + 10) + (fnt * 1.7 * 3.3) )//+ (fnt * 1.7 * 2.6) * (Math.pow(-1, i + 1) + 1))
+                                .attr("dy", 13 * fnt + sum + height * vote22[i] / 2)
+                                .attr("text-anchor", "start")
+                                .attr("alignment-baseline", "middle")
+                                .attr("font-size", i==1? fnt * 0.9:fnt * 1.2)
+                                .attr("fill", d_cCode[i])
+                                .attr("font-weight", "bold")
+                                .text(votePer22[i]);
+
+                            sum += height * vote22[i];
+                        }
+
+
+
+
+                    } else {
+
+                        var vote = [s.r22lee, s.r22yoon, s.r22sim];
+                        var voteP = [s.p22lee, s.p122yoon, s.p22sim];
+
+                        var sum = 0;
+                        var xx = 20;
+                        var height = h - (13 * fnt + 50);
+                        //var dep = 5+ (15* (s.p17the + s.p17hong + s.p17kuk + s.p17yoo + s.p17jung) / voteMax);
+                        var dep = 30;
+
+                        for (var i = 0 ; i < vote.length ; i++) {
+                            text2.append("line")
+                            .attr("x1", xx + dep + 2)
+                            .attr("x2", (xx + dep + 10) + (fnt * 1.7 * 2.6) * (Math.pow(-1, i + 1) + 1))
+                            .attr("y1", 13 * fnt + sum + height * vote[i] / 2)
+                            .attr("y2", 13 * fnt + sum + height * vote[i] / 2)
+                            .attr("stroke", cCode[i])
+                            .attr("stroke-width", 0.5)
+                            ;
+                            text2.append("rect")
+                                .attr("class", "barChart")
+                                .attr("x", xx)
+                                .attr("y", 13 * fnt + sum)
+                                .attr("width", dep)
+                                .attr("height", height * vote[i])
+                                .attr("fill", cCode[i])
+                                .attr("fill-opacity", 0.9)
+                                .attr("stroke", "white")
+                                .attr("stroke-width", 1);
+                            text2.append("text")
+                                .attr("class", "description1")
+                                .attr("dx", (xx + dep + 10) + (fnt * 1.7 * 2.6) * (Math.pow(-1, i + 1) + 1) + (fnt * 1.7 * 3))
+                                .attr("dy", 13 * fnt + sum + height * vote[i] / 2)
+                                .attr("text-anchor", "end")
+                                .attr("alignment-baseline", "middle")
+                                .attr("font-size", fnt * 1.7)
+                                .attr("fill", cCode[i])
+                                .attr("font-weight", "bold")
+                                .text(d3.format("-0,.1f")(vote[i] * 100) + "%");
+                            text2.append("text")
+                                .attr("class", "description2")
+                                .attr("dx", (xx + dep + 10) + (fnt * 1.7 * 2.6) * (Math.pow(-1, i + 1) + 1) + (fnt * 1.7 * 3.3))
+                                .attr("dy", 13 * fnt + sum + height * vote[i] / 2)
+                                .attr("text-anchor", "start")
+                                .attr("alignment-baseline", "middle")
+                                .attr("font-size", fnt * 1.2)
+                                .attr("fill", cCode[i])
+                                .attr("font-weight", "bold")
+                                .text(votePer[i]);
+                            /*            text2.append("text")
+                                             .attr("class", "description2")
+                                             .attr("dx", w / 2 - width / 2 + sum + (width * vote[i]) / 2)
+                                             .attr("dy", (height -80) + 33 * Math.pow(-1, i + 1))
+                                             .attr("text-anchor", "middle")
+                                             .attr("alignment-baseline", "middle")
+                                             .attr("font-size", "0.7em")
+                                             .attr("fill", cCode[i])
+                                             .attr("font-weight", "bold")
+                                             .text(d3.format("-0,")(voteP[i]) + "표");
+                                         text2.append("text")
+                                             .attr("class", "description3")
+                                             .attr("dx", w / 2 - width / 2 + sum + (width * vote[i]) / 2)
+                                             .attr("dy", (height - 80) + 44 * Math.pow(-1, i + 1))
+                                             .attr("text-anchor", "middle")
+                                             .attr("alignment-baseline", "middle")
+                                             .attr("font-size", "0.7em")
+                                             .attr("fill", cCode[i])
+                                             .attr("font-weight", "bold")
+                                             .text(votePer[i]);
+                 */
+                            sum += height * vote[i];
+                        }
+
+                    }
+
+
+                   
+
+                    
+
+                   
+
+
+                } //clicked()
+
+
+            } //main() function
+
+            
+        }
+
+    </script>
+</head>
+<body>
+    
+
+    <div id="wrap_middle">
+        
+    </div>
+
+
+
+
+</body>
+</html>
