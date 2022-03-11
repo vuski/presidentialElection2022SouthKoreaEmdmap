@@ -1,6 +1,9 @@
 # 2022년 대한민국 대통령 선거 지도 - 읍면동별 지도
 
 
+- 다음 페이지에서 인터랙티브 지도로 볼 수 있습니다.
+- https://vuski.github.io/presidentialElection2022SouthKoreaEmdmap/
+
 ## 다음의 7 종류 지도로 구성됩니다.
 
 - 지역별 1위 지도
